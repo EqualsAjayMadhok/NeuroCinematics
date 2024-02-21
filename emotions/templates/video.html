@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Visualization</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <script type="text/javascript">
+        var registerDataURL = "{% url 'register_data' %}";
+        var visualizationId = "{{ visualization_id }}";
+    </script>
+    <script src="{% static 'video_script.js' %}"></script>
+</head>
+
+<body>
+    <script src="https://ai-sdk.morphcast.com/v1.16/ai-sdk.js"></script>
+    <div id="loadingScreen" style="display:none;">
+        <div class="loadingContent">
+            <div class="spinner"></div>
+            <p>Analyzing and saving...</p>
+        </div>
+    </div>
+
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <h2>Thanks for watching the scene! Just a couple of questions to finish</h2>
+            <p>Would you watch this movie in a movie Theater?</p>
+            <select id="wouldBuyInput">
+                <option value="">Select an option</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+            <div class="input-row">
+                <p>How many Theater Tickets would you buy?</p>
+                <input type="number" id="amountToBuyInput" min="0" required>
+            </div>
+            <div class="button-row">
+                <button id="submitFeedback">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="video-detail-container">
+        <div id="webcamPermissionMessage" class="webcam-permission-message">
+            <p id="webcamRequiredMsg">Webcam access is required to play this video.</p>
+            <button id="requestWebcamBtn">Grant Webcam Access</button>
+        </div>
+        <h1 style="text-align: center;">{{ video.title }}</h1>
+        <div id="video-detail-wrapper" style="position: relative;">
+            <video id="videoPlayer" poster="{% static video.preview %}">
+                <source src="{% static video.path %}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <video id="webcamPreview" autoplay muted></video>
+            <p id="calibrationText">
+                This is a calibration preview. Please make sure that your face is completely inside your webcam's visual
+                range and that you are not too close or too far to it. When you're ready, click the "Play" button to
+                start the visualization.
+            </p>
+        </div>
+        <div class="video-controls">
+            <div class="left-controls">
+                <button id="playPauseBtn" class="disabled" disabled><i class="fas fa-play"></i></button>
+                <div class="volume-container">
+                    <button id="volumeBtn"><i class="fas fa-volume-up"></i></button>
+                    <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1">
+                </div>
+            </div>
+            <div class="right-controls">
+                <!-- Existing fullscreen button -->
+                <button id="fullscreenBtn" class="disabled" disabled style="height: fit-content;"><i
+                        class="fas fa-expand"></i></button>
+            </div>
+        </div>
+
+        <!-- Add a link to go back to the home page -->
+        <p><a href="{% url 'home' %}" class="video-detail-back-link">Back to Video Selection</a></p>
+    </div>
+</body>
+
+</html>

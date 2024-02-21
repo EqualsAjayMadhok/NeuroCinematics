@@ -1,0 +1,214 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Visualization</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <style>
+        #charts-container {
+            display: flex;
+            /* Use flexbox to layout the children */
+            /* Space out the children evenly */
+            width: 100%;
+            /* Full width of the parent element */
+            justify-content: center;
+        }
+
+        #charts-container canvas {
+            flex: 1;
+            /* Each canvas will take equal width */
+            margin: 0.5%;
+            /* Optional: Adds some space between charts */
+            max-width: 13% !important;
+            max-height: 200px !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="video-detail-container">
+        <h1 style="text-align: center;">{{ video.title }}</h1>
+        <div id="charts-container">
+            <canvas id="chart1"></canvas>
+            <canvas id="chart2"></canvas>
+            <canvas id="chart3"></canvas>
+            <canvas id="chart4"></canvas>
+            <canvas id="chart5"></canvas>
+            <canvas id="chart6"></canvas>
+            <canvas id="chart7"></canvas>
+        </div>
+
+        <div id="video-detail-wrapper">
+            <video id="videoPlayer" controls poster="{% static video.preview %}">
+                <source src="{% static video.path %}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <!-- Add a link to go back to the home page -->
+        <p><a href="{% url 'home' %}" class="video-detail-back-link">Back to Video Selection</a></p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+
+        function adjustVideoSize() {
+            var windowHeight = $(window).height();
+            var otherElementsHeight = $('h1').outerHeight(true) + $('p').outerHeight(true) + $('#charts-container').outerHeight(true);
+            var availableHeight = windowHeight - otherElementsHeight - 20;
+            var videoPlayer = $('#videoPlayer');
+
+            // Set the maximum height for the video
+            videoPlayer.css('max-height', availableHeight + 'px');
+
+            // Set the maximum width for the video (90% of the viewport width)
+            var maxWidth = $(window).width() * 0.9;
+            videoPlayer.css('max-width', maxWidth + 'px');
+
+            // Preserve the aspect ratio
+            var aspectRatio = videoPlayer.get(0).videoWidth / videoPlayer.get(0).videoHeight;
+            var actualWidth = Math.min(maxWidth, availableHeight * aspectRatio);
+            videoPlayer.css({ width: actualWidth + 'px', height: (actualWidth / aspectRatio) + 'px' });
+        }
+
+        // Adjust video size when the window is resized
+        $(window).resize(adjustVideoSize);
+
+        // Initial adjustment when the page loads
+        $(window).on('load', adjustVideoSize);
+
+
+        $(document).ready(function () {
+            createChart(JSON.parse('{{ vis_data|safe }}'))
+        });
+
+        function createChart(rawData) {
+            const emotionColors = {
+                'Angry': 'red',
+                'Disgust': 'green',
+                'Fear': 'purple',
+                'Happy': 'goldenrod',
+                'Neutral': 'gray',
+                'Sad': 'blue',
+                'Surprise': 'orange'
+            };
+            const emotions = ['Angry',
+                'Disgust',
+                'Fear',
+                'Happy',
+                'Neutral',
+                'Sad',
+                'Surprise']
+            /*const chartDiv = document.createElement('div');
+            chartDiv.style.maxHeight = '500px';
+            chartDiv.style.overflow = 'auto';
+            chartDiv.style.display = 'flex';
+            chartDiv.style.justifyContent = 'center';  // Ensures the canvas respects the max height
+
+            // Append the wrapper div to the chartsContainer
+            document.getElementById('chartsContainer').appendChild(chartDiv);
+
+            // Create a canvas element inside the wrapper div
+            const canvas = document.createElement('canvas');
+            chartDiv.appendChild(canvas);*/
+
+            let datasets = {
+                'Angry': [], 'Disgust': [], 'Fear': [],
+                'Happy': [], 'Neutral': [], 'Sad': [], 'Surprise': []
+            };
+
+            // Determine the range for x-values
+            let timestamps = rawData.map(data => data.playback_timestamp);
+            let minTimestamp = Math.min(...timestamps);
+            let maxTimestamp = Math.max(...timestamps);
+
+            // Calculate x-values (multiples of 0.25 within the timestamp range)
+            const xValues = [];
+            for (let x = Math.floor(minTimestamp / 0.25) * 0.25; x <= Math.ceil(maxTimestamp / 0.25) * 0.25; x += 0.25) {
+                xValues.push(x);
+            }
+
+            // Organize data into datasets based on emotion
+            Object.keys(datasets).forEach(emotion => {
+                xValues.forEach(x => {
+                    // Find a data point close to the current x-value
+                    const closePoints = rawData.filter(data =>
+                        data.dominantEmotion === emotion && Math.abs(data.playback_timestamp - x) < 0.1
+                    );
+                    let y;
+                    if (closePoints.length > 0) {
+                        // Average the intensity of close points
+                        const totalIntensity = closePoints.reduce((sum, data) => sum + data.emotionIntensity * 5, 0);
+                        y = totalIntensity / closePoints.length;
+                    } else {
+                        y = 0;
+                    }
+
+                    datasets[emotion].push({ x, y });
+                });
+            });
+
+
+            // Render the chart
+            var data = []
+            var charts = []
+            for (var i = 0; i < 7; i++) {
+                let ctx = document.getElementById('chart' + (i + 1)).getContext('2d');
+                let chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: emotions[i],
+                            borderColor: emotionColors[emotions[i]],
+                            data: [], // Data points
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true, // Set this to true
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom'
+                            },
+                            y: {
+                                min: 0,
+                                max: 5
+                            }
+                        }
+                    }
+                });
+                charts.push(chart)
+                data.push(datasets[emotions[i]])
+            }
+
+            let video = document.getElementById('videoPlayer');
+            video.addEventListener('timeupdate', function () {
+                let currentTime = video.currentTime;
+
+                for (var i = 0; i < 7; i++) {
+                    let filteredData = data[i].filter(item => item.x >= currentTime - 1 && item.x <= currentTime);
+
+                    // Extract x and y values from the filtered data
+                    let labels = filteredData.map(item => item.x);
+                    let points = filteredData.map(item => item.y);
+
+                    charts[i].data.labels = labels;
+                    charts[i].data.datasets.forEach((dataset) => {
+                        dataset.data = points;
+                    });
+                    charts[i].update();
+                }
+            });
+
+        }
+    </script>
+</body>
+
+</html>

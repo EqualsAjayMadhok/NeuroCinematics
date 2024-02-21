@@ -1,0 +1,13 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+{% load static %} <!-- Load the static tag library -->
+
+<!-- Link to your custom CSS file -->
+<link rel="stylesheet" href="{% static 'admin_styles.css' %}" type="text/css">
+
+<div style="margin: 20px 0;">
+    <a href="{% url 'admin:analytics' %}" class="analytics-btn">Analytics</a>
+</div>
+{{ block.super }}
+{% endblock %}

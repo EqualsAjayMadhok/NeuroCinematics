@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Grid</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="{% static 'script.js' %}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var videos = document.querySelectorAll('.video-item video');
+    
+            videos.forEach(function(video) {
+                video.addEventListener('click', function() {
+                    // Find the parent link element
+                    var link = video.closest('.home-link');
+                    if (link) {
+                        window.location.href = link.href;
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+
+<body class="content-body">
+    <!-- Display Messages -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="container container-video">
+        <h1>Video Selection</h1>
+        <div class="video-grid">
+            <!-- Loop through videos -->
+            {% for video in videos_data %}
+            <div>
+                <a href="{% url 'video' forloop.counter0 %}" class="home-link">
+
+                    <div class="video-item">
+                        <video width="480" height="270" preload="metadata" onclick="event.preventDefault()" poster="{% static video.preview %}">
+                            <source src="{% static video.path %}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <h3>{{ video.title }}</h3>
+                    </div>
+                </a>
+                <a href="{% url 'visualizations' forloop.counter0 %}" class="home-link">
+                    <p>Visualizations: {{video.visualizations}}</p>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+
+</html>

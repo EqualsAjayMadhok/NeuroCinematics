@@ -1,0 +1,460 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="{% static 'admin_styles.css' %}" type="text/css">
+<script>
+    function fetchAndRenderData(userId, age, gender, movies, videoId) {
+        // Clear
+        const chartsContainer = document.getElementById('chartsContainer');
+        chartsContainer.innerHTML = '';
+
+        var url = `{% url 'get_visualization_data' %}?user_id=${userId}&age=${age}&gender=${gender}&movies=${movies}&video_id=${videoId}`;
+        console.log(url)
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Create the pie chart for would_buy_percentage
+                createPieChart(data.would_buy_percentage);
+
+                // Create a representation for the average amount to buy
+                createAverageBarChart(data.average_amount_to_buy, data.max_amount_to_buy, data.mode_amount_to_buy);
+
+                // Handle each visualization data
+                /*data.visualizations.forEach(visData => {
+                    createChart(visData);
+                });*/
+                createMeanChart(data.visualizations, data.videoSrc);
+            });
+    }
+
+    function createPieChart(wouldBuyPercentage) {
+        const pieChartDiv = document.getElementById('pieChartContainer');
+        pieChartDiv.innerHTML = '';  // Clear previous chart if any
+
+        const canvas = document.createElement('canvas');
+        pieChartDiv.appendChild(canvas);
+
+        const data = {
+            labels: ['Would Buy', 'Would Not Buy'],
+            datasets: [{
+                data: [wouldBuyPercentage, 100 - wouldBuyPercentage],
+                backgroundColor: ['green', 'red'],
+            }]
+        };
+
+        const config = {
+            type: 'pie',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        };
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, config);
+    }
+
+    function createAverageBarChart(averageAmount, maxAmount, modeAmounts) {
+        const barChartDiv = document.getElementById('barChartContainer');
+        barChartDiv.innerHTML = '';  // Clear previous chart if any
+
+        const canvas = document.createElement('canvas');
+        barChartDiv.appendChild(canvas);
+
+        let modeValue = modeAmounts.length > 1 ? Math.min(...modeAmounts) : modeAmounts[0]; // or any other logic you prefer
+
+        const data = {
+            labels: ['Average', 'Maximum', 'Mode'],
+            datasets: [{
+                label: 'Amount to Buy',
+                data: [averageAmount, maxAmount, modeValue],
+                borderWidth: 1
+            }]
+        };
+
+        const config = {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        };
+
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, config);
+    }
+
+    function createChart(rawData) {
+        const emotionColors = {
+            'Angry': 'red',
+            'Disgust': 'green',
+            'Fear': 'purple',
+            'Happy': 'goldenrod',
+            'Neutral': 'gray',
+            'Sad': 'blue',
+            'Surprise': 'orange'
+        };
+        const chartDiv = document.createElement('div');
+        chartDiv.style.maxHeight = '500px';
+        chartDiv.style.overflow = 'auto';
+        chartDiv.style.display = 'flex';
+        chartDiv.style.justifyContent = 'center';  // Ensures the canvas respects the max height
+
+        // Append the wrapper div to the chartsContainer
+        document.getElementById('chartsContainer').appendChild(chartDiv);
+
+        // Create a canvas element inside the wrapper div
+        const canvas = document.createElement('canvas');
+        chartDiv.appendChild(canvas);
+
+        let datasets = {
+            'Angry': [], 'Disgust': [], 'Fear': [],
+            'Happy': [], 'Neutral': [], 'Sad': [], 'Surprise': []
+        };
+
+        // Determine the range for x-values
+        let timestamps = rawData.map(data => data.playback_timestamp);
+        let minTimestamp = Math.min(...timestamps);
+        let maxTimestamp = Math.max(...timestamps);
+
+        // Calculate x-values (multiples of 0.25 within the timestamp range)
+        const xValues = [];
+        for (let x = Math.floor(minTimestamp / 0.25) * 0.25; x <= Math.ceil(maxTimestamp / 0.25) * 0.25; x += 0.25) {
+            xValues.push(x);
+        }
+
+        // Organize data into datasets based on emotion
+        Object.keys(datasets).forEach(emotion => {
+            xValues.forEach(x => {
+                // Find a data point close to the current x-value
+                const closePoints = rawData.filter(data =>
+                    data.dominantEmotion === emotion && Math.abs(data.playback_timestamp - x) < 0.1
+                );
+                let y;
+                if (closePoints.length > 0) {
+                    // Average the intensity of close points
+                    const totalIntensity = closePoints.reduce((sum, data) => sum + data.emotionIntensity * 5, 0);
+                    y = totalIntensity / closePoints.length;
+                } else {
+                    y = 0;
+                }
+
+                datasets[emotion].push({ x, y });
+            });
+        });
+
+        // Configure the Chart.js data and options
+        const config = {
+            type: 'line',
+            data: {
+                datasets: Object.keys(datasets).map(emotion => ({
+                    label: emotion,
+                    data: datasets[emotion],
+                    borderColor: emotionColors[emotion],
+                    fill: false
+                }))
+            },
+            options: {
+                scales: {
+                    x: { type: 'linear', position: 'bottom' },
+                    y: { type: 'linear' }
+                }
+            }
+        };
+
+        // Render the chart
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, config);
+
+    }
+
+    function createMeanChart(data, videoSrc) {
+        const emotionColors = {
+            'Angry': 'red',
+            'Disgust': 'green',
+            'Fear': 'purple',
+            'Happy': 'goldenrod',
+            'Neutral': 'gray',
+            'Sad': 'blue',
+            'Surprise': 'orange'
+        };
+        const chartDiv = document.createElement('div');
+        chartDiv.style.position = 'absolute'; // Position chart absolutely
+        chartDiv.style.top = '0';  // Align top of chart with container
+        chartDiv.style.left = '0'; // Align left of chart with container
+        chartDiv.style.bottom = '75px'; // Align left of chart with container
+        chartDiv.style.right = '0'; // Align left of chart with container
+        chartDiv.style.maxHeight = '425px';
+        chartDiv.style.overflow = 'auto';
+        chartDiv.style.display = 'flex';           // Set display to flex
+        chartDiv.style.alignItems = 'center';       // Center items vertically
+        chartDiv.style.justifyContent = 'center';
+        chartDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.25)'; // Semi-transparent white
+
+
+        // Create video element
+        const video = createVideoElement(videoSrc);
+        video.style.maxHeight = '500px';
+        video.style.width = '100%'; // Make video take full width of the container
+        // Create a container for the video and the chart
+        const containerDiv = document.createElement('div');
+        containerDiv.style.position = 'relative'; // Set positioning context
+        containerDiv.style.width = '890px'; // Set a specific width for the container
+        containerDiv.style.height = '500px'; // Set a specific height for the container
+        containerDiv.style.margin = 'auto'; // Set a specific height for the container
+        // Append video and chart to the container
+        containerDiv.appendChild(video);
+        containerDiv.appendChild(chartDiv);
+        // Append the container to the chartsContainer
+        document.getElementById('chartsContainer').appendChild(containerDiv);
+
+        // Create a canvas element inside the wrapper div
+        const canvas = document.createElement('canvas');
+        chartDiv.appendChild(canvas);
+
+        let datasets = {
+            'Angry': [], 'Disgust': [], 'Fear': [],
+            'Happy': [], 'Neutral': [], 'Sad': [], 'Surprise': []
+        };
+
+        // Determine the range for x-values
+        let timestamps = data.map(rawData => rawData.map(dataItem => dataItem.playback_timestamp)).flat();
+        let minTimestamp = Math.min(...timestamps);
+        let maxTimestamp = Math.max(...timestamps);
+
+        // Calculate x-values (multiples of 0.25 within the timestamp range)
+        const xValues = [];
+        for (let x = Math.floor(minTimestamp / 0.25) * 0.25; x <= Math.ceil(maxTimestamp / 0.25) * 0.25; x += 0.25) {
+            xValues.push(x);
+        }
+
+        // Organize data into datasets based on emotion
+        Object.keys(datasets).forEach(emotion => {
+            xValues.forEach(x => {
+                // Find a data point close to the current x-value
+                const closePoints = data
+                    .map(rawData => rawData.filter(dataItem =>
+                        dataItem.dominantEmotion === emotion && Math.abs(dataItem.playback_timestamp - x) < 0.1
+                    ))
+                    .flat();
+                let y;
+                if (closePoints.length > 0) {
+                    // Average the intensity of close points
+                    const totalIntensity = closePoints.reduce((sum, data) => sum + data.emotionIntensity * 5, 0);
+                    y = totalIntensity / data.length;
+                } else {
+                    y = 0;
+                }
+
+                datasets[emotion].push({ x, y });
+            });
+        });
+
+        // Put to 0 all non dominant emotions
+        for (let i = 0; i < xValues.length; i++) {
+            maxY = Math.max(...Object.values(datasets).map(emotion => emotion[i].y));
+            Object.keys(datasets).forEach(emotion => {
+                if (datasets[emotion][i].y < maxY) {
+                    datasets[emotion][i].y = 0
+                }
+            });
+        };
+
+        // Configure the Chart.js data and options
+        const config = {
+            type: 'line',
+            data: {
+            },
+            options: {
+                scales: {
+                    x: { type: 'linear', position: 'bottom' },
+                    y: { type: 'linear' }
+                },
+                animation: false,
+                plugins: {
+                    tooltip: {
+                        enabled: true,
+                        mode: 'point',
+                        intersect: false,
+                        callbacks: {
+                            title: function (tooltipItems, data) {
+                                const tooltipItem = tooltipItems[0];
+                                const totalSeconds = tooltipItem.raw.x; // Assuming your data is structured accordingly
+                                const minutes = Math.floor(totalSeconds / 60);
+                                const seconds = Math.floor(totalSeconds % 60);
+                                const frames = Math.floor((totalSeconds % 1) * 30);
+
+                                const formattedTime = `Time: ${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
+                                return formattedTime;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        // Render the chart
+        const ctx = canvas.getContext('2d');
+        var myChart = new Chart(ctx, config);
+
+        function updateChart(videoCurrentTime) {
+            // Update datasets for the new range
+            const startTime = videoCurrentTime - 5;
+            const endTime = videoCurrentTime + 5;
+
+            let updatedDatasets = {};
+            Object.keys(datasets).forEach(emotion => {
+                updatedDatasets[emotion] = datasets[emotion].filter(dataItem =>
+                    dataItem.x >= startTime && dataItem.x <= endTime
+                );
+            });
+
+            // Update the chart's datasets
+            myChart.data.datasets = Object.keys(updatedDatasets).map(emotion => ({
+                label: emotion,
+                data: updatedDatasets[emotion],
+                borderColor: emotionColors[emotion],
+                fill: false
+            }));
+
+            // Redraw the chart
+            myChart.update();
+        }
+
+        // Set up time update event listener on the video
+        video.addEventListener('timeupdate', function () {
+            updateChart(video.currentTime);
+        });
+    }
+
+    function pad(number) {
+        return number.toString().padStart(2, '0');
+    }
+
+
+    function createVideoElement(videoPath) {
+        // Create the video element
+        const video = document.createElement('video');
+        video.id = 'videoPlayer';
+        video.controls = true;
+
+        // Create the source element
+        const source = document.createElement('source');
+        source.src = videoPath;
+        source.type = 'video/mp4';
+
+        // Append the source to the video
+        video.appendChild(source);
+
+        // Optional: Add fallback content
+        const fallbackContent = document.createTextNode('Your browser does not support the video tag.');
+        video.appendChild(fallbackContent);
+
+        // Append the video to the DOM (specify where it should go)
+        // For example, appending to a div with a specific ID
+        return video
+    }
+
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('visualizationForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            var userId = document.getElementById('id_email').value;
+            var age = document.getElementById('id_age_group').value;
+            var gender = document.getElementById('id_gender').value;
+            var movies = document.getElementById('id_movies_per_month').value;
+            var videoId = document.getElementById('id_video').value;
+
+            fetchAndRenderData(userId, age, gender, movies, videoId);
+
+            document.getElementById('chartsFlexContainer').classList.remove('hidden');
+            document.querySelector('.bigChartContainer').classList.remove('hidden');
+        });
+
+        // Indicate number of matching users
+        var form = document.querySelector('#visualizationForm');
+        var fields = form.querySelectorAll('input, select');
+
+        function handleFieldChange(event) {
+            // If the email field was changed, autocomplete the rest of them
+            if (event.target.id === 'id_email') {
+                var userId = event.target.value;
+                if (userId) {
+                    fetch(`/get_user_data/?user_id=${userId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.error) {
+                                document.querySelector('#id_age_group').value = data.age_group;
+                                document.querySelector('#id_gender').value = data.gender;
+                                document.querySelector('#id_movies_per_month').value = data.movies_per_month;
+                            }
+                        });
+                }
+            }
+
+            // Update the user count for any field change
+            updateUserCount();
+        }
+
+        function updateUserCount() {
+            var formData = new FormData(form);
+            var queryString = new URLSearchParams(formData).toString();
+            fetch(`/get_user_count/?${queryString}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('#userCount').textContent = 'Matching users: ' + data.count;
+                    document.querySelector('#visCount').textContent = 'Visualizations: ' + data.visCount;
+                });
+        }
+
+        fields.forEach(function (field) {
+            field.addEventListener('change', handleFieldChange);
+        });
+
+        updateUserCount(); // Update count initially
+    });
+</script>
+
+
+
+<h1 style="margin: auto; text-align: center; margin-bottom: 15px;">Analytics</h1>
+<form id="visualizationForm" method="get" action=".">
+    {% for field in form %}
+    <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+    </div>
+    {% endfor %}
+    <input type="submit" value="Show Visualization(s)">
+    <div id="countPreviews">
+        <span id="userCount">Matching users: 0</span>
+        <span id="visCount">Visualizations: 0</span>
+    </div>
+</form>
+<!-- Here you will add your plot -->
+<div id="chartsFlexContainer" class="hidden">
+    <div class="chartContainer inlineChartContainer">
+        <h1 style="text-align: center;">Buy tendencies</h1>
+        <div id="pieChartContainer"></div>
+    </div>
+    <div class="chartContainer  inlineChartContainer">
+        <h1 style="text-align: center;">Number of tickets</h1>
+        <div id="barChartContainer"></div>
+    </div>
+</div>
+
+<div class="chartContainer bigChartContainer hidden">
+    <h1 style="text-align: center;">Averaged emotions</h1>
+    <div id="chartsContainer"></div>
+</div>
+{% endblock %}
