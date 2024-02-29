@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-ls#&yo53px1c!6cmu+#k7z-2u*bc466%a@1)51z72m%9xeai+8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["reaimagineapps.pythonanywhere.com", '127.0.0.1']
+ALLOWED_HOSTS = ["reaimagineapps.pythonanywhere.com", '127.0.0.1', '16.16.196.152', 'spectra.celeritylabs.org']
 
 # Application definition
 
