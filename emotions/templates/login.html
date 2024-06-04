@@ -10,7 +10,15 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="{% static 'script.js' %}"></script>
 </head>
+<style>
+    .logo-container {
+    display: flex; /* Use flexbox for easy centering */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically (if needed) */
+    margin-bottom: 20px; /* Optional spacing below the logo */
+}
 
+</style>
 <body>
 
     <div class="message-box">
@@ -20,7 +28,7 @@
             {% endfor %}
         {% endif %}
     </div>
-
+    <div class="logo-container"> <img src="{% static 'previews/PHOTO-2024-03-05-18-55-56.jpg' %}" width="25%" alt="Your Logo"></div>
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
         <h2>Login</h2>
