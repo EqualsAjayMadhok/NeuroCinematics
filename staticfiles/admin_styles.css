@@ -1,0 +1,143 @@
+/* custom_admin.css */
+.analytics-btn {
+    background-color: #007bff;
+    color: white !important;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    display: inline-block; /* Allows padding and width adjustments */
+    transition: background-color 0.3s; /* Smooth transition for the hover effect */
+}
+
+.analytics-btn:hover {
+    background-color: #0056b3; /* Darker shade of blue for hover */
+    color: white; /* Keeps text color unchanged */
+}
+
+
+#chartsFlexContainer {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+
+.inlineChartContainer {
+    flex-basis: 46%;
+    /* Each takes up 45% of the flex container width */
+    max-width: 46%;
+    box-sizing: border-box;
+    margin: 20px;
+}
+
+.chartContainer {
+    width: 100%; /* Ensures the container takes up all available width */
+    height: auto; /* Adjust based on your preference */
+    padding: 20px;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    display: flex; /* Ensures children can use flex sizing */
+    flex-direction: column; /* Stack children vertically */
+    justify-content: center; /* Center children vertically */
+    align-items: center; /* Center children horizontally */
+}
+
+/* Ensure the canvas fills its container */
+#barChartContainer {
+    width: 100%;
+    flex-grow: 1;
+}
+
+.bigChartContainer{
+    max-width: 94%;
+    margin: auto;
+}
+
+#chartsFlexContainer{
+    display: flex; justify-content: space-around; flex-wrap: wrap;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+
+#visualizationForm {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 800px; /* Adjust based on your preference */
+    margin: auto;
+}
+
+.form-row {
+    display: contents; /* Allows child .form-group to follow the grid layout */
+}
+
+.form-group {
+    margin: 2px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1; /* Makes the element span all columns */
+}
+
+.actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    grid-column: 1 / -1; /* Makes the actions row span all columns */
+}
+
+#visualizationForm label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+#visualizationForm select, #visualizationForm input[type="submit"] {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+#visualizationForm input[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    grid-column: 1 / -1; /* Span across all columns */
+}
+
+#visualizationForm input[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+#countPreviews {
+    margin: auto;
+    text-align: center;
+    grid-column: 1 / -1; /* Span across all columns */
+}
+#countPreviews span {
+    margin: 0 15px ;
+}
+
+@media (max-width: 768px) {
+    #visualizationForm {
+        grid-template-columns: 1fr; /* Stack inputs vertically on smaller screens */
+    }
+    .actions {
+        flex-direction: column;
+    }
+    #userCount {
+        order: 3; /* Ensures the count is below the submit button */
+        margin-top: 10px;
+    }
+}
+

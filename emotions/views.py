@@ -1,18 +1,22 @@
-from django.shortcuts import render, redirect
-from .models import User  # Import your User model
-from django.contrib import messages  # For displaying messages
-from django.http import JsonResponse
-from .models import Register, Visualization
 import json
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-from .forms import UserVideoForm
-from django.urls import reverse
-from django.db.models import Avg, Max, Q
+import random
+from email.utils import formataddr
 from statistics import multimode
+
+from django.conf import settings
+from django.contrib import messages  # For displaying messages
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core.mail import send_mail
-import random
+from django.db.models import Avg, Max
+from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+
+from .forms import UserVideoForm
+from .models import Register, Visualization
+from .models import User  # Import your User model
+
 
 def login_view(request):
     if request.method == 'POST':
@@ -40,13 +44,15 @@ def login_view(request):
                 messages.success(request, "The new OTP has been sent to your email.")
             except User.DoesNotExist:
                 messages.error(request, "Email not found! Only invited users are allowed to this app.")
-    
+
     return render(request, 'login.html')
+
 
 def send_email(to_email, otp):
     subject = 'New OTP'
     message = f'Your new OTP for Neuro Cinematics beta experiment (https://reaimagineapps.pythonanywhere.com/) is: {otp}'
-    email_from = settings.EMAIL_HOST_USER
+    from_name = 'spectra'
+    email_from = formataddr((from_name, settings.EMAIL_HOST_USER))
     recipient_list = [to_email]
     send_mail(subject, message, email_from, recipient_list)
 
@@ -54,10 +60,10 @@ def send_email(to_email, otp):
 def home_view(request):
     user = get_user(request)
     if user is None:
-        return redirect('login') 
-    
+        return redirect('login')
+
     Visualization.objects.filter(confirmed=False, user_id=user.id).delete()
-    
+
     # Check if demographic fields are filled
     if not user.age_group or not user.gender or not user.movies_per_month or not user.zip:
         return redirect('setup')  # Redirect to setup form
@@ -68,9 +74,9 @@ def home_view(request):
     nvisualizations = []
     for i in range(len(settings.VIDEOS)):
         nvisualizations.append(len(visualizations.filter(video_id=i)))
-        
+
     videos_data = [
-        {**video, 'visualizations': visualization} 
+        {**video, 'visualizations': visualization}
         for video, visualization in zip(settings.VIDEOS, nvisualizations)
     ]
     # Render the real home page
@@ -80,8 +86,8 @@ def home_view(request):
 def setup_view(request):
     user = get_user(request)
     if user is None:
-        return redirect('login') 
-    
+        return redirect('login')
+
     if request.method == 'POST':
         # Update user demographics
         age_group = request.POST.get('age_group')
@@ -113,8 +119,8 @@ def setup_view(request):
 def video_view(request, video_index):
     user = get_user(request)
     if user is None:
-        return redirect('login') 
-    
+        return redirect('login')
+
     try:
         video = settings.VIDEOS[int(video_index)]  # Fetch the video by index
     except (IndexError, ValueError):
@@ -128,8 +134,9 @@ def video_view(request, video_index):
     )
     print("New visualization created! ", new_visualization.id)
 
-    return render(request, 'video.html', {'video': video, "visualization_id" : new_visualization.id})
-    
+    return render(request, 'video.html', {'video': video, "visualization_id": new_visualization.id})
+
+
 @csrf_exempt  # Only for demonstration; consider CSRF implications
 def register_data(request):
     if request.method == 'POST':
@@ -145,16 +152,16 @@ def register_data(request):
                     playback_timestamp=item.get('playback_timestamp'),
                     dominantEmotion=item.get('dominant_emotion'),
                     attention=item.get('attention'),
-                    emotionIntensity = item.get('emotionIntensity')
+                    emotionIntensity=item.get('emotionIntensity')
                 )
                 for item in register_list[:-1]])
-                
+
             visualization = Visualization.objects.get(id=visualization_id)
             visualization.confirmed = True
             visualization.would_buy = register_list[-1].get("would_buy") == "true"
             visualization.amount_to_buy = register_list[-1].get("amount_to_buy") if visualization.would_buy else 0
             visualization.save()
-                
+
             messages.success(request, "Your visualization was processed successfully!")
             return JsonResponse({'redirect_url': reverse('home'), 'status': 'success'})
         except Exception as e:
@@ -164,26 +171,27 @@ def register_data(request):
 
     return JsonResponse({'redirect_url': reverse('home'), 'status': 'invalid_method'})
 
-def get_visualization_data(request):    
+
+def get_visualization_data(request):
     user_id = request.GET.get('user_id')
     age = request.GET.get('age')
     gender = request.GET.get('gender')
     movies = request.GET.get('movies')
-    video_id = request.GET.get('video_id')    
-    
+    video_id = request.GET.get('video_id')
+
     users = User.objects.all()
     if user_id:
         users = users.filter(id=user_id)
     if age:
         users = users.filter(age_group=age)
     if gender:
-        users = users.filter(gender = gender)
+        users = users.filter(gender=gender)
     if movies:
-        users = users.filter(movies_per_month = movies)
+        users = users.filter(movies_per_month=movies)
 
     visualizations = Visualization.objects.filter(
         confirmed=True,
-        user__in=users, 
+        user__in=users,
         video_id=video_id
     )
     total_visualizations = visualizations.count()
@@ -207,10 +215,11 @@ def get_visualization_data(request):
         vis_data = list(Register.objects.filter(
             visualization=vis
         ).values('playback_timestamp', 'emotionIntensity', 'dominantEmotion'))
-        
+
         data['visualizations'].append(vis_data)
 
     return JsonResponse(data, safe=False)
+
 
 def get_user_data(request):
     user_id = request.GET.get('user_id')
@@ -226,6 +235,7 @@ def get_user_data(request):
         except User.DoesNotExist:
             return JsonResponse({'error': 'User not found'}, status=404)
     return JsonResponse({'error': 'No user ID provided'}, status=400)
+
 
 def get_user_count(request):
     user_id = request.GET.get('email')
@@ -243,14 +253,15 @@ def get_user_count(request):
         users = users.filter(gender=gender)
     if movies:
         users = users.filter(movies_per_month=movies)
-        
+
     visCount = Visualization.objects.filter(
         confirmed=True,
-        user__in=users, 
+        user__in=users,
         video_id=video_id
     ).count()
 
     return JsonResponse({'count': users.count(), "visCount": visCount})
+
 
 def visualization_plot_view(request):
     if request.method == "POST":
@@ -263,36 +274,35 @@ def visualization_plot_view(request):
         form = UserVideoForm()
     return render(request, 'admin/visualization_plot.html', {'form': form})
 
+
 def visualizations(request, video_index):
     user = get_user(request)
     if user is None:
-        return redirect('login') 
-    
+        return redirect('login')
+
     try:
         video = settings.VIDEOS[int(video_index)]  # Fetch the video by index
     except (IndexError, ValueError):
         messages.error(request, "The requested video does not exist.")  # Send an error message
         return redirect('home')  # Redirect back to the home page
-    
-    
+
     visualizations = Visualization.objects.filter(
         confirmed=True,
-        user_id=user.id, 
+        user_id=user.id,
         video_id=video_index
     )
     if len(visualizations) == 0:
-        return redirect('home') 
-        
+        return redirect('home')
+
     vis_data = list(Register.objects.filter(
         visualization=visualizations[0]
     ).values('playback_timestamp', 'emotionIntensity', 'dominantEmotion'))
 
     return render(request, 'visualizations.html', {'video': video, 'vis_data': json.dumps(vis_data)})
-    
+
 
 def get_user(request):
     user_id = request.session.get('user_id')
     if not user_id:
         return None
     return User.objects.get(id=user_id)
-    
