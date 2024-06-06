@@ -28,7 +28,7 @@
             {% endfor %}
         {% endif %}
     </div>
-    <div class="logo-container"> <img src="{% static 'previews/PHOTO-2024-03-05-18-55-56.jpg' %}" width="25%" alt="Your Logo"></div>
+    <div class="logo-container"> <img src="https://spectramedia.s3.amazonaws.com/spectra_logo.jpg" width="25%" alt="Your Logo"></div>
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
         <h2>Login</h2>
