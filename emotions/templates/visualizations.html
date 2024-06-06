@@ -47,7 +47,7 @@
 
         <div id="video-detail-wrapper">
             <video id="videoPlayer" controls poster="{% static video.preview %}">
-                <source src="{% static video.path %}" type="video/mp4">
+                <source src="{{ video.path }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>
