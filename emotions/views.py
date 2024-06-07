@@ -2,7 +2,7 @@ import json
 import random
 from email.utils import formataddr
 from statistics import multimode
-
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.contrib import messages  # For displaying messages
 from django.contrib.staticfiles.storage import staticfiles_storage
@@ -48,13 +48,46 @@ def login_view(request):
     return render(request, 'login.html')
 
 
+
 def send_email(to_email, otp):
     subject = 'New OTP'
-    message = f'Your new OTP for Neuro Cinematics beta experiment (https://reaimagineapps.pythonanywhere.com/) is: {otp}'
-    from_name = 'spectra'
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">
+        <div style="background-color: #f8f9fa; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+                <!-- Header -->
+                <div style="background-color: #343a40; padding: 20px; text-align: center; color: white;">
+                    <h1 style="margin: 0;">Spectra CelerityLabs</h1>
+                </div>
+                <!-- Body -->
+                <div style="padding: 20px; text-align: center;">
+                    <img src="https://spectramedia.s3.amazonaws.com/spectra_logo.jpg" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+                    <h2>Your new OTP for Spectra CelerityLabs Beta Experiment</h2>
+                    <p>Your OTP is: <strong>{otp}</strong></p>
+                    <p><a href="https://spectra.celeritylabs.org/">Visit our website</a></p>
+                </div>
+                <!-- Footer -->
+                <div style="background-color: #f1f1f1; padding: 10px; text-align: center; color: #666;">
+                    <p style="margin: 0;">&copy; 2024 Spectra CelerityLabs. All rights reserved.</p>
+                    <p style="margin: 0;">1234 Main St, Anytown, USA</p>
+                    <p style="margin: 0;"><a href="https://spectra.celeritylabs.org/unsubscribe" style="color: #007bff;">Unsubscribe</a></p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    from_name = 'Spectra'
     email_from = formataddr((from_name, settings.EMAIL_HOST_USER))
     recipient_list = [to_email]
-    send_mail(subject, message, email_from, recipient_list)
+
+    # Create the email message
+    msg = EmailMultiAlternatives(subject, "", email_from, recipient_list)
+    msg.attach_alternative(html_content, "text/html")
+
+    # Send the email
+    msg.send()
 
 
 def home_view(request):
