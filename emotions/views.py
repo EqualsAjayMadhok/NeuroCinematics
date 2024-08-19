@@ -242,7 +242,7 @@ def get_visualization_data(request):
         'average_amount_to_buy': average_amount_to_buy,
         'max_amount_to_buy': max_amount_to_buy,
         'mode_amount_to_buy': mode_amount_to_buy,
-        "videoSrc": staticfiles_storage.url(settings.VIDEOS[int(video_id)]["path"])
+        "videoSrc": settings.VIDEOS[int(video_id)]["path"]
     }
     for vis in visualizations:
         vis_data = list(Register.objects.filter(
